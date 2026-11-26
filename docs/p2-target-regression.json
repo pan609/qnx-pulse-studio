@@ -1,0 +1,78 @@
+{
+  "result": "PASS",
+  "capturedAt": "2026-11-26T07:10:06.175552+00:00",
+  "checks": [
+    {
+      "body": "{\"message\":\"scope_mode\",\"unrelated\":\"all\"}",
+      "headers": "",
+      "status": 200,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"scope_mode\":\"all\"",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"scope_mode\":true}",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"scope_pid\":\"45063\"}",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"reset\":true,\"scope_mode\":\"all\"}",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"scope_mode\":\"all\",\"scope_mode\":\"lab\"}",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{\"scope_mode\":\"all\"}\u0000trailing",
+      "headers": "",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{}",
+      "headers": "\r\nContent-Length: 2",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{}",
+      "headers": "\r\ncontent-length: 100",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{}",
+      "headers": "\r\ntRaNsFeR-EnCoDiNg: chunked",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "body": "{}",
+      "headers": "\r\nTRANSFER-ENCODING: identity",
+      "status": 400,
+      "configAndGenerationUnchanged": true
+    },
+    {
+      "escapedRealMember": "scope_mode",
+      "status": 200,
+      "applied": true
+    }
+  ],
+  "restoredConfig": true
+}

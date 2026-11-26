@@ -34,8 +34,8 @@ $(BUILD_DIR)/pulse_scope_resmgr: src/pulse_scope_resmgr.c include/pulse_scope.h
 $(BUILD_DIR)/ipc_lab_workload: src/ipc_lab_workload.c include/pulse_scope.h
 	$(CC) $(CFLAGS) -o $@ src/ipc_lab_workload.c $(LDFLAGS)
 
-$(BUILD_DIR)/telemetry_agent: src/telemetry_agent.c include/pulse_scope.h
-	$(CC) $(CFLAGS) -o $@ src/telemetry_agent.c $(SOCKLIB)
+$(BUILD_DIR)/telemetry_agent: src/telemetry_agent.c src/control_json.c src/control_json.h include/pulse_scope.h
+	$(CC) $(CFLAGS) -o $@ src/telemetry_agent.c src/control_json.c $(SOCKLIB)
 
 clean:
 	rm -rf build

@@ -11,9 +11,9 @@ export function analyzeSnapshotDeterministic(s: Snapshot, lang: Lang = 'en'): Di
   const breach = s.metrics.p99_e2e_us > 5000;
   const reply = blocked.some(t => ['REPLY','SEND'].includes(t.state));
   const title = inversion ? (zh ? '观测到优先级反转候选链' : 'Candidate priority inversion chain observed')
+    : breach ? (zh ? `E2E 超期：P99 ${s.metrics.p99_e2e_us} µs > 5000 µs` : `E2E budget exceeded: P99 ${s.metrics.p99_e2e_us} µs > 5000 µs`)
     : reply ? (zh ? '观测到同步 IPC 等待' : 'Synchronous IPC wait observed')
     : boosted.length ? (zh ? '观测到有效优先级提升' : 'Effective-priority elevation observed')
-    : breach ? (zh ? 'E2E 超期：需进一步追踪' : 'E2E deadline exceeded: more tracing needed')
     : (zh ? '本次快照未定位到异常链' : 'No anomalous chain identified in this snapshot');
   return {
     severity: inversion || breach ? 'critical' : reply ? 'warning' : 'nominal', title,

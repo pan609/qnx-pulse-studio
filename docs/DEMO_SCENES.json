@@ -1,0 +1,12 @@
+[
+ {"key":"intro","seconds":12,"narration":"QNX Pulse Studio is a zero hardware observatory for QNX OS eight. It combines a native user space resource manager, a scheduling experiment, and a reproducible Apple Silicon codelab."},
+ {"key":"proof","seconds":13,"narration":"These are captured commands from the actual QNX eight guest, running under QEMU's TCG emulator. The kernel identity and compiled ELF verification logs are included with the project."},
+ {"key":"connect","seconds":15,"narration":"Studio starts in clearly labeled, read only recorded mode. Here I connect to the local target. Live failures never silently switch to simulation. Fault injection uses the native telemetry bridge."},
+ {"key":"off","seconds":18,"narration":"The sensor uses synchronous message passing through controller and actuator threads. With mutex priority inheritance disabled, medium priority CPU work can delay the low priority lock holder and the high priority sensor."},
+ {"key":"on","seconds":18,"narration":"Enabling inheritance can reduce that blocking. These curves are live measurements, not generated traces. QEMU scheduling still creates outliers, so I make no worst case timing or vehicle safety claim."},
+ {"key":"benchmark","seconds":20,"narration":"The A B benchmark waits for the sensor's configuration generation acknowledgment before resetting counters and sampling. End to end response time and pulse interval jitter use separate statistical buckets. Each late cycle is counted once."},
+ {"key":"scope","seconds":16,"narration":"Scope all reveals real QNX system threads, and a process filter inspects another application. This is bounded, non atomic observation. The end to end timing metrics still belong to the built in experiment."},
+ {"key":"analysis","seconds":15,"narration":"The default trace analyst uses observed priorities, blocking states and measured counters, without reading fault switches. Its explanations are local evidence rules. Causal claims need additional native tracing."},
+ {"key":"codelab","seconds":17,"narration":"Nine bilingual codelab steps explain the zero hardware workflow and include checkpoints, original data, and troubleshooting. The archived priority inheritance run keeps its real deadline miss instead of hiding it."},
+ {"key":"outro","seconds":14,"narration":"Export the raw trace, reproduce the experiment, and inspect the code. QNX Pulse Studio turns microkernel mechanisms into an accessible, honest development and learning workflow."}
+]

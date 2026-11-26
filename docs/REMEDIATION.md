@@ -55,3 +55,7 @@ First source review: 20261126-144848-71ad, five findings validated and fixed. La
 Second source review: 20261126-145319-c9ab identified benchmark.source render-field validation; fixed with an explicit allowed-source enum and regression.
 
 Final source audit: 20261126-145449-e97b, no findings. Full production-build browser regression: 9 expected, 0 failed, 0 skipped. Final targeted regression: 2 expected, 0 failed.
+
+## Judge R2 PASS and non-blocking follow-up
+
+The judge granted PASS (8.2/10) on `aae0101`; report: `../../../../judge/reviews/03-qnx-global-hackathon-r2.md` relative to this document. Five P2 fixes remain within that pass: typed real-member JSON control; case-insensitive full header framing; no numeric TID ceiling; explicit P99 breach title; correct recorded/live/synthetic Quick Start. Focused verification covers 26 JSON cases and 12 framing cases on the host, the production scanner with sparse IDs 1/129/130, 12 probes on actual QNX with no invalid-request mutation, and live A/B plus diagnostic-title browser checks. Existing original capture remains unchanged, including the PI ON miss. No new feature or full judge round is requested.

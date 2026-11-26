@@ -297,9 +297,6 @@ static void scan_single_pid(int pid, const char *proc_name,
 
         seen_for_pid++;
         st.tid++;
-        if (st.tid > 128) {
-            break;
-        }
     }
     close(fd);
 }

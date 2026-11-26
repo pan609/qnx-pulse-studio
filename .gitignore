@@ -21,3 +21,6 @@ studio-ui/playwright-report/
 docs/assets/frames/
 studio-ui/public/assets/
 docs/qa-rounds/
+
+# Local review video, editable audio and raw screen footage
+deliverables/

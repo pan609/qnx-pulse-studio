@@ -135,7 +135,7 @@ curl -s http://127.0.0.1:8080/api/health
 cd studio-ui
 npm install
 npm run dev
-# Open http://localhost:5173 (auto-detects live QNX 8.0 on :8080; append ?demo=1 for offline demo trace)
+# Open http://localhost:5173 (recorded QNX capture by default; click Connect QNX for live data; ?demo=1 is synthetic simulation)
 ```
 
 ---
@@ -169,3 +169,9 @@ The source, QNX ELF binaries and trace are tied by SHA-256 in `docs/capture-sha2
 The default analyzer is a local evidence rule engine, not an LLM. Optional BYOK sends selected sampled telemetry to the explicitly configured endpoint. No key is stored. Suggestions require engineering review. The 100 km/h ruler shows extra travel during measured E2E latency only, not total braking distance or a vehicle safety guarantee.
 
 For an HTTPS hosted Studio unable to access an HTTP localhost target, run `npm run dev` locally. QEMU forwarding is bound to loopback. No hardware timing certification is implied.
+
+## R2 follow-up protocol checks
+
+The bundled 276-cycle capture and `docs/capture-sha256.json` are frozen evidence from source `aae0101`; their source hashes refer to that revision. Later P2 input/iteration fixes do not rewrite the capture or remove its PI ON outlier. `docs/p2-build-sha256.json` identifies the patched C source and binaries separately.
+
+Control accepts a flat JSON object with actual typed scalar members. Unknown scalar members are ignored; nested values, duplicate control members, malformed JSON and type mismatches are rejected without changing configuration. The minimal HTTP bridge rejects Transfer-Encoding and duplicate Content-Length headers. Focused results: `docs/p2-host-regression.json`, `docs/p2-target-regression.json`, and `docs/p2-browser-regression.json`.

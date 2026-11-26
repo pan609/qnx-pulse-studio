@@ -3,7 +3,9 @@
     "argv": [
       "/opt/homebrew/Cellar/node@22/22.23.4/bin/node",
       "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/node_modules/.bin/playwright",
-      "test"
+      "test",
+      "--grep",
+      "critical P99|live QNX target"
     ],
     "configFile": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/playwright.config.ts",
     "rootDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/tests",
@@ -104,7 +106,7 @@
       "line": 0,
       "specs": [
         {
-          "title": "raw capture preserves every phase, E2E count, P99 and misses",
+          "title": "live QNX target: scenarios, PID scope, A/B, export and recorded transition",
           "ok": true,
           "tags": [],
           "tests": [
@@ -119,12 +121,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 7,
+                  "duration": 16059,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-11-26T06:54:40.471Z",
+                  "startTime": "2026-11-26T07:10:11.499Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -132,47 +134,13 @@
               "status": "expected"
             }
           ],
-          "id": "a7cf16ab6d0dd51a5bfe-79ecf2c83e76c5e87c77",
+          "id": "a7cf16ab6d0dd51a5bfe-6fe8fd390af463d358c4",
           "file": "telemetry.spec.ts",
-          "line": 10,
+          "line": 66,
           "column": 1
         },
         {
-          "title": "chart filters E2E and deduplicates controls and repeated events",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 15,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:54:40.496Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-fdb960852ea217e1f50f",
-          "file": "telemetry.spec.ts",
-          "line": 20,
-          "column": 1
-        },
-        {
-          "title": "diagnosis cannot read fault flags; claims require sampled evidence",
+          "title": "critical P99 breach remains explicit even with ordinary REPLY samples",
           "ok": true,
           "tags": [],
           "tests": [
@@ -192,7 +160,7 @@
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-11-26T06:54:40.517Z",
+                  "startTime": "2026-11-26T07:10:28.081Z",
                   "annotations": [],
                   "attachments": []
                 }
@@ -200,213 +168,9 @@
               "status": "expected"
             }
           ],
-          "id": "a7cf16ab6d0dd51a5bfe-29ffa52da95152b50ee6",
+          "id": "a7cf16ab6d0dd51a5bfe-44e508b4e297a6aa9e50",
           "file": "telemetry.spec.ts",
-          "line": 30,
-          "column": 1
-        },
-        {
-          "title": "hosted default is offline replay, makes no API probes, accepts both languages",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 1893,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:54:40.538Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-b72b51ce16ea9b8cf7ca",
-          "file": "telemetry.spec.ts",
-          "line": 42,
-          "column": 1
-        },
-        {
-          "title": "simulation is explicit; A/B phases stay synthetic; bad imports report errors",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 6939,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:54:42.541Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-e180218ff5d545aa4229",
-          "file": "telemetry.spec.ts",
-          "line": 54,
-          "column": 1
-        },
-        {
-          "title": "live QNX target: scenarios, PID scope, A/B, export and recorded transition",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 15994,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:54:49.484Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-6fe8fd390af463d358c4",
-          "file": "telemetry.spec.ts",
-          "line": 66,
-          "column": 1
-        },
-        {
-          "title": "Codelab has nine checkpoints, real screenshots and working navigation",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 1427,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:55:05.485Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-9bcb924903e5060baa76",
-          "file": "telemetry.spec.ts",
-          "line": 103,
-          "column": 1
-        },
-        {
-          "title": "missing archive never presents simulation as recorded data",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 421,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:55:06.916Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-6446506416e29bb3bc75",
-          "file": "telemetry.spec.ts",
-          "line": 113,
-          "column": 1
-        },
-        {
-          "title": "explicit LLM result survives the following telemetry samples",
-          "ok": true,
-          "tags": [],
-          "tests": [
-            {
-              "timeout": 45000,
-              "annotations": [],
-              "expectedStatus": "passed",
-              "projectId": "",
-              "projectName": "",
-              "results": [
-                {
-                  "workerIndex": 0,
-                  "parallelIndex": 0,
-                  "status": "passed",
-                  "duration": 1476,
-                  "errors": [],
-                  "stdout": [],
-                  "stderr": [],
-                  "retry": 0,
-                  "startTime": "2026-11-26T06:55:07.341Z",
-                  "annotations": [],
-                  "attachments": []
-                }
-              ],
-              "status": "expected"
-            }
-          ],
-          "id": "a7cf16ab6d0dd51a5bfe-8bf4d249516ced19f66f",
-          "file": "telemetry.spec.ts",
-          "line": 119,
+          "line": 128,
           "column": 1
         }
       ]
@@ -414,9 +178,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-11-26T06:54:35.263Z",
-    "duration": 33596.03799999999,
-    "expected": 9,
+    "startTime": "2026-11-26T07:10:06.893Z",
+    "duration": 21252.165,
+    "expected": 2,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

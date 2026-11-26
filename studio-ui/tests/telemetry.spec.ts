@@ -124,3 +124,10 @@ test('explicit LLM result survives the following telemetry samples',async({page}
   await page.getByRole('button',{name:'Analyze Current Sample',exact:false}).click();await expect(page.locator('.diag-head')).toContainText('Captured model report');
   await page.waitForTimeout(900);await expect(page.locator('.diag-head')).toContainText('Captured model report');
 });
+
+test('critical P99 breach remains explicit even with ordinary REPLY samples',()=>{
+  const s=structuredClone(capture.lastSnapshot);
+  s.metrics.p99_e2e_us=7029;
+  const report=analyzeSnapshotDeterministic(s);
+  expect(report.severity).toBe('critical');expect(report.title).toContain('7029');expect(report.title).toContain('5000');
+});

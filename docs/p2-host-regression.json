@@ -1,0 +1,198 @@
+{
+  "result": "PASS",
+  "jsonCases": [
+    {
+      "json": "{}",
+      "accepted": true,
+      "present": 0
+    },
+    {
+      "json": "{\"message\":\"scope_mode\",\"unrelated\":\"all\"}",
+      "accepted": true,
+      "present": 0
+    },
+    {
+      "json": "{\"scope_mode\":\"all\"}",
+      "accepted": true,
+      "present": 64
+    },
+    {
+      "json": "{\"scop\\u0065_mode\":\"all\"}",
+      "accepted": true,
+      "present": 64
+    },
+    {
+      "json": "{\"scope_mode\":\"la\\u0062\"}",
+      "accepted": true,
+      "present": 64
+    },
+    {
+      "json": "{\"scope_mode\\u0000\":\"all\"}",
+      "accepted": true,
+      "present": 0
+    },
+    {
+      "json": "{\"prio_inherit_enabled\":true,\"tick_period_ms\":50,\"scope_pid\":45063}",
+      "accepted": true,
+      "present": 145
+    },
+    {
+      "json": "{\"message\":\"escaped \\\"scope_mode\\\" and \\u4e2d\\u6587\"}",
+      "accepted": true,
+      "present": 0
+    },
+    {
+      "json": "{\"reset\":true}",
+      "accepted": true,
+      "present": 256
+    },
+    {
+      "json": "{\"scope_mode\":\"all\"",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_mode\":true}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"fault_cpu_hog\":1}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_mode\":\"all\\u0000\"}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_mode\":\"all\",\"scope_mode\":\"lab\"}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_pid\":1.5}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_pid\":2147483648}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"tick_period_ms\":-1}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_mode\":\"all\",}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"x\":null} trailing",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "[]",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "true",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"x\":\"bad\\x\"}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"x\":\"\\uD800\"}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"scope_pid\":01}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"x\":{}}",
+      "accepted": false,
+      "present": null
+    },
+    {
+      "json": "{\"reset\":true,\"scope_mode\":\"lab\"}",
+      "accepted": false,
+      "present": null
+    }
+  ],
+  "headerCases": [
+    {
+      "extra": "",
+      "accepted": true,
+      "length": 0
+    },
+    {
+      "extra": "\r\ncOnTeNt-LeNgTh: 17",
+      "accepted": true,
+      "length": 17
+    },
+    {
+      "extra": "\r\nContent-Length: 2\r\nContent-Length: 4",
+      "accepted": false,
+      "length": 2
+    },
+    {
+      "extra": "\r\nContent-Length: 2\r\nContent-Length: 2",
+      "accepted": false,
+      "length": 2
+    },
+    {
+      "extra": "\r\ntRaNsFeR-EnCoDiNg: chunked",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nContent-Length: 2\r\ntRaNsFeR-EnCoDiNg: identity",
+      "accepted": false,
+      "length": 2
+    },
+    {
+      "extra": "\r\nContent-Length: +2",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nContent-Length: -2",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nContent-Length: 2x",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nContent-Length: 99999999999999999999999",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nBad Header: x",
+      "accepted": false,
+      "length": 0
+    },
+    {
+      "extra": "\r\nHost: x\nTransfer-Encoding: chunked",
+      "accepted": false,
+      "length": 0
+    }
+  ],
+  "sparseTid": "sparse TID 1/129/130: PASS"
+}

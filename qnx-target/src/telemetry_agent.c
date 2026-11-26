@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #include "pulse_scope.h"
+#include "control_json.h"
 
 static int g_scope_fd = -1;
 
@@ -129,47 +130,6 @@ static void send_http_response(int cfd, int code, const char *status_text,
     }
 }
 
-static int parse_json_int(const char *body, const char *key, int fallback) {
-    char needle[64];
-    snprintf(needle, sizeof(needle), "\"%s\"", key);
-    const char *p = strstr(body, needle);
-    if (!p) return fallback;
-    p = strchr(p + strlen(needle), ':');
-    if (!p) return fallback;
-    p++;
-    while (*p == ' ' || *p == '\t') p++;
-    if (strncmp(p, "true", 4) == 0) return 1;
-    if (strncmp(p, "false", 5) == 0) return 0;
-    if (*p == '"') {
-        p++;
-        if (strncmp(p, "all", 3) == 0) return (int)PS_SCOPE_ALL;
-        if (strncmp(p, "pid", 3) == 0) return (int)PS_SCOPE_PID;
-        if (strncmp(p, "lab", 3) == 0) return (int)PS_SCOPE_LAB;
-    }
-    return atoi(p);
-}
-
-static int parse_content_length(const char *headers, size_t hdr_len) {
-    const char *p = headers;
-    const char *end = headers + hdr_len;
-    while (p < end) {
-        if ((size_t)(end - p) >= 15 && strncasecmp(p, "Content-Length:", 15) == 0) {
-            p += 15;
-            while (p < end && (*p == ' ' || *p == '\t')) p++;
-            char *tail = NULL;
-            long val = strtol(p, &tail, 10);
-            if (tail == p || val < 0 || val > 8191) return -1;
-            while (tail < end && (*tail == ' ' || *tail == '\t' || *tail == '\r')) tail++;
-            if (tail < end && *tail != '\n') return -1;
-            return (int)val;
-        }
-        const char *nl = memchr(p, '\n', (size_t)(end - p));
-        if (!nl) break;
-        p = nl + 1;
-    }
-    return 0;
-}
-
 static ssize_t read_full_http_request(int cfd, char *buf, size_t cap, const char **body_out) {
     struct timeval tv;
     tv.tv_sec = 2;
@@ -179,7 +139,7 @@ static ssize_t read_full_http_request(int cfd, char *buf, size_t cap, const char
 
     size_t total = 0;
     char *hdr_end = NULL;
-    int content_len = 0;
+    size_t content_len = 0;
 
     while (total + 1 < cap) {
         ssize_t n = recv(cfd, buf + total, cap - 1 - total, 0);
@@ -193,23 +153,23 @@ static ssize_t read_full_http_request(int cfd, char *buf, size_t cap, const char
             hdr_end = strstr(buf, "\r\n\r\n");
             if (hdr_end) {
                 size_t hdr_bytes = (size_t)(hdr_end - buf);
-                content_len = parse_content_length(buf, hdr_bytes);
-                if (content_len < 0 || hdr_bytes + 4 + (size_t)content_len >= cap) return -1;
+                if (ps_http_content_length(buf, hdr_bytes, &content_len) || hdr_bytes + 4 + content_len >= cap) return -1;
             }
         }
         if (hdr_end) {
             size_t body_got = total - (size_t)((hdr_end + 4) - buf);
-            if ((int)body_got >= content_len) {
+            if (body_got >= content_len) {
                 break;
             }
         }
     }
 
     if (total == 0) return 0;
-    if (!hdr_end || strstr(buf, "Transfer-Encoding:") || strstr(buf, "transfer-encoding:")) return -1;
+    if (!hdr_end) return -1;
     size_t body_got = total - (size_t)((hdr_end + 4) - buf);
     if (body_got < (size_t)content_len) return -1;
     *body_out = hdr_end + 4;
+    if (memchr(*body_out, '\0', content_len)) return -1;
     ((char *)*body_out)[content_len] = '\0';
     return (ssize_t)total;
 }
@@ -317,24 +277,35 @@ static void handle_control(int cfd, const char *body) {
         return;
     }
 
-    if (strstr(body, "\"reset\":true") || strstr(body, "\"reset\": true")) {
+    ps_control_patch_t patch;
+    if (ps_parse_control_json(body, &patch) != 0) {
+        send_http_response(cfd, 400, "Bad Request", "application/json", "{\"error\":\"invalid control JSON or field type\"}");
+        return;
+    }
+    if (patch.value[PS_CTL_RESET]) {
         devctl(g_scope_fd, DCMD_PULSE_SCOPE_RESET, NULL, 0, NULL);
         send_http_response(cfd, 200, "OK", "application/json", "{\"ok\":true,\"action\":\"reset\"}");
         return;
     }
-
     ps_fault_config_t cfg;
     memset(&cfg, 0, sizeof(cfg));
-    devctl(g_scope_fd, DCMD_PULSE_SCOPE_GET_CFG, &cfg, sizeof(cfg), NULL);
-
-    cfg.prio_inherit_enabled = (uint32_t)parse_json_int(body, "prio_inherit_enabled", (int)cfg.prio_inherit_enabled);
-    cfg.fault_prio_inversion = (uint32_t)parse_json_int(body, "fault_prio_inversion", (int)cfg.fault_prio_inversion);
-    cfg.fault_reply_stall    = (uint32_t)parse_json_int(body, "fault_reply_stall",    (int)cfg.fault_reply_stall);
-    cfg.fault_cpu_hog        = (uint32_t)parse_json_int(body, "fault_cpu_hog",        (int)cfg.fault_cpu_hog);
-    cfg.tick_period_ms       = (uint32_t)parse_json_int(body, "tick_period_ms",       (int)cfg.tick_period_ms);
-    cfg.stall_ms             = (uint32_t)parse_json_int(body, "stall_ms",             (int)cfg.stall_ms);
-    cfg.scope_mode           = (uint32_t)parse_json_int(body, "scope_mode",           (int)cfg.scope_mode);
-    cfg.scope_pid            = (int32_t)parse_json_int(body,  "scope_pid",            (int)cfg.scope_pid);
+    if (devctl(g_scope_fd, DCMD_PULSE_SCOPE_GET_CFG, &cfg, sizeof(cfg), NULL) != EOK) {
+        send_http_response(cfd, 503, "Unavailable", "application/json", "{\"error\":\"GET_CFG failed\"}"); return;
+    }
+    if (patch.present == 0 || patch.present == (1U << PS_CTL_RESET)) {
+        char result[96]; snprintf(result,sizeof(result),"{\"ok\":true,\"generation\":%u}",cfg.generation);
+        send_http_response(cfd,200,"OK","application/json",result); return;
+    }
+#define APPLY(FIELD, MEMBER) if (patch.present & (1U << FIELD)) cfg.MEMBER = patch.value[FIELD]
+    APPLY(PS_CTL_PI, prio_inherit_enabled);
+    APPLY(PS_CTL_INVERSION, fault_prio_inversion);
+    APPLY(PS_CTL_REPLY, fault_reply_stall);
+    APPLY(PS_CTL_HOG, fault_cpu_hog);
+    APPLY(PS_CTL_TICK, tick_period_ms);
+    APPLY(PS_CTL_STALL, stall_ms);
+    APPLY(PS_CTL_SCOPE, scope_mode);
+    APPLY(PS_CTL_PID, scope_pid);
+#undef APPLY
 
     int rc = devctl(g_scope_fd, DCMD_PULSE_SCOPE_SET_CFG, &cfg, sizeof(cfg), NULL);
     if (rc != EOK) {
