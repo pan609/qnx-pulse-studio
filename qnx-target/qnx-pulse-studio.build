@@ -1,0 +1,13 @@
+# QNX Pulse Studio - QNX 8.0 IFS Buildfile Snippet (aarch64le QEMU virt)
+# Can be appended to mkqnximage local/snippets/data_files.custom or an mkifs buildfile
+# to auto-bundle and auto-launch Pulse Studio services on QNX 8.0 boot.
+
+[perms=0755] /usr/local/bin/pulse_scope_resmgr = ./build/aarch64le/pulse_scope_resmgr
+[perms=0755] /usr/local/bin/ipc_lab_workload   = ./build/aarch64le/ipc_lab_workload
+[perms=0755] /usr/local/bin/telemetry_agent    = ./build/aarch64le/telemetry_agent
+
+# Boot startup sequence (place in rc.local or startup script):
+#   /usr/local/bin/pulse_scope_resmgr &
+#   waitfor /dev/pulse_scope 5
+#   /usr/local/bin/ipc_lab_workload &
+#   /usr/local/bin/telemetry_agent 8080 &

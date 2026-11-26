@@ -1,0 +1,16 @@
+# Credentials, installers, and local QNX images (NEVER commit!)
+*.run
+*.vmdk
+*.bin
+*.img
+*.key
+.env
+.env.*
+qnx-env/
+
+# Build artifacts
+qnx-target/build/
+studio-ui/node_modules/
+studio-ui/dist/
+.DS_Store
+*.tsbuildinfo
