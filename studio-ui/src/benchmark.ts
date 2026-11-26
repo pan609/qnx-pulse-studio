@@ -1,141 +1,82 @@
 import type { OscPoint, Snapshot } from './types';
 
 export interface BenchmarkSide {
-  avgIpcUs: number;
-  maxIpcUs: number;
-  p99JitterUs: number;
-  prioBoosts: number;
-  deadlineMisses: number;
-  samples: number;
+  avgE2eUs: number; p99E2eUs: number; maxE2eUs: number;
+  p99JitterUs: number; prioBoosts: number; deadlineMisses: number; samples: number;
 }
-
 export interface BenchmarkComparison {
   capturedAt: string;
   source: 'qnx-8.0-live' | 'qnx-8.0-sim' | 'verified-qnx-8.0-capture';
-  hostLabel: string;
-  piOff: BenchmarkSide;
-  piOn: BenchmarkSide;
+  hostLabel: string; piOff: BenchmarkSide; piOn: BenchmarkSide;
 }
-
 export interface TraceArchive {
-  schema: 'qnx-pulse-studio-trace/v1';
-  exportedAt: string;
-  source: string;
-  host: Snapshot['host'];
-  cycles_per_sec: number;
-  points: OscPoint[];
-  lastSnapshot: Snapshot;
+  schema: 'qnx-pulse-studio-trace/v2'; exportedAt: string; source: string;
+  host: Snapshot['host']; cycles_per_sec: number;
+  points: OscPoint[]; lastSnapshot: Snapshot;
+  benchmark?: BenchmarkComparison;
+  phaseSnapshots?: Record<string, Snapshot>;
+  snapshots?: { phase: string; receivedAt: string; snapshot: Snapshot }[];
 }
-
-/**
- * Genuine verified capture recorded on 2026-11-25 from real QNX 8.0.0 (QEMU_virt aarch64le)
- * running /dev/pulse_scope + ipc_lab_workload pinned to CPU 0 via ThreadCtl(_NTO_TCTL_RUNMASK, 0x1).
- */
-export const VERIFIED_QNX8_BENCHMARK: BenchmarkComparison = {
-  capturedAt: '2026-11-25 (Real QNX 8.0.0 QEMU aarch64le)',
-  source: 'verified-qnx-8.0-capture',
-  hostLabel: 'QNX 8.0.0 QEMU_virt aarch64le · 62.5 MHz ClockCycles()',
-  piOff: {
-    avgIpcUs: 5374,
-    maxIpcUs: 66535,
-    p99JitterUs: 63666,
-    prioBoosts: 0,
-    deadlineMisses: 66,
-    samples: 180,
-  },
-  piOn: {
-    avgIpcUs: 1256,
-    maxIpcUs: 54490,
-    p99JitterUs: 4776,
-    prioBoosts: 35,
-    deadlineMisses: 12,
-    samples: 186,
-  },
-};
-
-export function createVerifiedTraceArchive(): TraceArchive {
-  const now = Date.now();
-  const points: OscPoint[] = [];
-  // 20 nominal points -> 20 PI OFF inversion crisis -> 25 PI ON rescue
-  for (let i = 0; i < 65; i++) {
-    if (i < 18) {
-      points.push({
-        ts: now - (65 - i) * 350,
-        ipcUs: 185 + ((i * 19) % 45),
-        jitterUs: 24 + ((i * 13) % 32),
-        boosted: false,
-        anomaly: false,
-      });
-    } else if (i < 40) {
-      const spike = 24000 + ((i * 7919) % 39600);
-      points.push({
-        ts: now - (65 - i) * 350,
-        ipcUs: Math.round(spike * 0.45),
-        jitterUs: spike,
-        boosted: false,
-        anomaly: true,
-      });
-    } else {
-      points.push({
-        ts: now - (65 - i) * 350,
-        ipcUs: 1120 + ((i * 97) % 380),
-        jitterUs: 2150 + ((i * 173) % 2450),
-        boosted: true,
-        anomaly: false,
-      });
+export function benchmarkSide(snap: Snapshot): BenchmarkSide {
+  const m = snap.metrics;
+  return { avgE2eUs: m.avg_e2e_us, p99E2eUs: m.p99_e2e_us, maxE2eUs: m.max_e2e_us,
+    p99JitterUs: m.p99_jitter_us, prioBoosts: m.prio_boost_count,
+    deadlineMisses: m.deadline_misses, samples: m.total_cycles };
+}
+export function validateSnapshot(value: unknown): asserts value is Snapshot {
+  const s = value as Snapshot;
+  if (!s || !['qnx-8.0-live', 'qnx-8.0-sim'].includes(s.source) || !s.host ||
+      !s.metrics || !s.config || !Array.isArray(s.threads) || !Array.isArray(s.events) ||
+      !Number.isFinite(s.snapshot_ns) || !(s.cycles_per_sec > 0)) throw new Error('Invalid telemetry snapshot');
+  if (!['sysname','release','machine','nodename'].every(k => typeof s.host[k as keyof Snapshot['host']] === 'string') ||
+      !['lab','all','pid'].includes(s.config.scope_mode) ||
+      !['prio_inherit_enabled','fault_prio_inversion','fault_reply_stall','fault_cpu_hog'].every(k => typeof s.config[k as keyof Snapshot['config']] === 'boolean') ||
+      ![s.config.tick_period_ms,s.config.stall_ms,s.config.scope_pid,s.config.generation].every(Number.isFinite)) throw new Error('Invalid host or configuration');
+  for (const key of ['total_cycles','avg_e2e_us','p99_e2e_us','max_e2e_us','last_e2e_us',
+    'p99_jitter_us','last_jitter_us','deadline_misses','prio_boost_count','total_ipc_msgs','total_pulses'] as const) {
+    if (!Number.isFinite(s.metrics[key]) || s.metrics[key] < 0) throw new Error('Invalid metric: ' + key);
+  }
+  for (const th of s.threads) {
+    if (!th || th.proc_name !== undefined && typeof th.proc_name !== 'string' || typeof th.name !== 'string' || typeof th.state !== 'string' || typeof th.policy !== 'string' ||
+        ![th.pid, th.tid, th.priority, th.real_priority, th.cpu, th.blocked_on_pid].every(Number.isFinite)) throw new Error('Invalid thread');
+  }
+  for (const ev of s.events) {
+    if (!ev || typeof ev.label !== 'string' || ![ev.seq,ev.ts_ns,ev.kind,ev.latency_us,ev.jitter_us,ev.flags].every(Number.isFinite)) throw new Error('Invalid event');
+  }
+}
+export function parseTrace(value: unknown): TraceArchive {
+  const a = value as TraceArchive;
+  if (!a || a.schema !== 'qnx-pulse-studio-trace/v2' || !Array.isArray(a.points) ||
+      a.points.length > 100000 || typeof a.exportedAt !== 'string') throw new Error('Expected a v2 Trace JSON file');
+  validateSnapshot(a.lastSnapshot);
+  for (const p of a.points) {
+    if (!p || ![p.ts, p.ipcUs, p.jitterUs].every(Number.isFinite) || p.ipcUs < 0 || p.jitterUs < 0) throw new Error('Invalid trace point');
+  }
+  if (a.benchmark) {
+    if (!['qnx-8.0-live','qnx-8.0-sim','verified-qnx-8.0-capture'].includes(a.benchmark.source) || typeof a.benchmark.hostLabel !== 'string' || typeof a.benchmark.capturedAt !== 'string') throw new Error('Invalid benchmark metadata');
+    for (const side of [a.benchmark.piOff, a.benchmark.piOn]) {
+      if (!side || !['avgE2eUs','p99E2eUs','maxE2eUs','p99JitterUs','prioBoosts','deadlineMisses','samples'].every(k => Number.isFinite(side[k as keyof BenchmarkSide]))) throw new Error('Invalid benchmark');
     }
   }
+  return a;
+}
+export async function loadVerifiedCapture(): Promise<TraceArchive> {
+  const ctrl = new AbortController(); const timer=setTimeout(()=>ctrl.abort(),5000);
+  try {
+    const res = await fetch(`${import.meta.env.BASE_URL}captures/qnx8-qemu-verified-trace.json`,{signal:ctrl.signal});
+    if (!res.ok) throw new Error('Capture HTTP ' + res.status);
+    return parseTrace(await res.json());
+  } finally {clearTimeout(timer);}
+}
 
-  return {
-    schema: 'qnx-pulse-studio-trace/v1',
-    exportedAt: '2026-11-25T10:51:55.000Z',
-    source: 'qnx-8.0-live',
-    host: {
-      sysname: 'QNX',
-      release: '8.0.0',
-      machine: 'QEMU_virt',
-      nodename: 'noname',
-    },
-    cycles_per_sec: 62_500_000,
-    points,
-    lastSnapshot: {
-      source: 'qnx-8.0-live',
-      host: {
-        sysname: 'QNX',
-        release: '8.0.0',
-        machine: 'QEMU_virt',
-        nodename: 'noname',
-      },
-      snapshot_ns: 95_000_000_000,
-      cycles_per_sec: 62_500_000,
-      metrics: {
-        total_ipc_msgs: 186,
-        total_pulses: 62,
-        prio_boost_count: 35,
-        deadline_misses: 12,
-        avg_ipc_us: 1256,
-        max_ipc_us: 54490,
-        p99_jitter_us: 4776,
-        last_jitter_us: 2341,
-      },
-      config: {
-        prio_inherit_enabled: true,
-        fault_prio_inversion: true,
-        fault_reply_stall: false,
-        fault_cpu_hog: true,
-        tick_period_ms: 50,
-        stall_ms: 35,
-      },
-      threads: [
-        { pid: 987157, tid: 6, name: 'sensor_rt_loop', priority: 30, real_priority: 30, state: 'RECEIVE', policy: 'SCHED_FIFO', blocked_on_pid: 0, cpu: 0 },
-        { pid: 987157, tid: 3, name: 'controller_srv', priority: 30, real_priority: 25, state: 'RECEIVE', policy: 'SCHED_FIFO', blocked_on_pid: 0, cpu: 1 },
-        { pid: 987157, tid: 2, name: 'actuator_srv', priority: 30, real_priority: 20, state: 'RECEIVE', policy: 'SCHED_FIFO', blocked_on_pid: 0, cpu: 0 },
-        { pid: 987157, tid: 4, name: 'low_calib_worker', priority: 30, real_priority: 15, state: 'RUNNING', policy: 'SCHED_FIFO', blocked_on_pid: 0, cpu: 0 },
-        { pid: 987157, tid: 5, name: 'med_cpu_hog', priority: 24, real_priority: 24, state: 'READY', policy: 'SCHED_FIFO', blocked_on_pid: 0, cpu: 0 },
-        { pid: 966676, tid: 1, name: 'pulse_scope_resmgr', priority: 10, real_priority: 10, state: 'REPLY', policy: 'SCHED_RR', blocked_on_pid: 0, cpu: 1 },
-        { pid: 999446, tid: 1, name: 'telemetry_agent', priority: 10, real_priority: 10, state: 'RUNNING', policy: 'SCHED_RR', blocked_on_pid: 0, cpu: 1 },
-      ],
-      events: [],
-    },
-  };
+// Never infer a boost from the fault-injection switch: only measured priority/events.
+export function observedBoost(s: Snapshot): boolean {
+  return s.threads.some(th => th.priority > th.real_priority);
+}
+export function pointsFromSnapshot(s: Snapshot, afterSeq: number): OscPoint[] {
+  return s.events.filter(e => e.kind === 6 && e.seq > afterSeq).map(e => ({
+    seq: e.seq, ts: e.ts_ns / 1000000, ipcUs: e.latency_us, jitterUs: e.jitter_us,
+    boosted: s.events.some(b => b.kind === 3 && b.ts_ns <= e.ts_ns && e.ts_ns - b.ts_ns < 50000000),
+    anomaly: e.latency_us > 5000,
+  }));
 }

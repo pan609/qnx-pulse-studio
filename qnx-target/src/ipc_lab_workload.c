@@ -6,9 +6,12 @@
  *      via ChannelCreate(), ConnectAttach(), MsgSend(), MsgReceive(), MsgReply()
  *   2. Asynchronous QNX Pulse Timer: timer_create(CLOCK_MONOTONIC) + SIGEV_PULSE_INIT
  *   3. Deterministic SCHED_FIFO Real-Time Priority Scheduling & Priority Inheritance:
- *      Live toggle between PTHREAD_PRIO_NONE (Priority Inversion storm!) and
- *      PTHREAD_PRIO_INHERIT (QNX microkernel priority boost rescues the deadline!)
- *   4. Interactive Fault Injection polled from /dev/pulse_scope via devctl()
+ *      - Shared mutex critical section is targets 1.8 ms of nominal busy work.
+ *      - PTHREAD_PRIO_INHERIT: QNX boosts low_calib_worker (P15 -> P30) immediately,
+ *        reducing inversion in this experiment (no WCET guarantee under QEMU).
+ *      - PTHREAD_PRIO_NONE: med_cpu_hog (P24) preempts low_calib_worker (P15) on CPU 0,
+ *        causing classic unbounded Priority Inversion (> 25 ms deadline breach!).
+ *   4. Thread-safe g_cfg synchronization and zero asymmetric metric overrides.
  */
 
 #include <errno.h>
@@ -27,23 +30,41 @@
 
 #include "pulse_scope.h"
 
-static uint64_t g_cycles_per_sec = 1000000000ULL;
+static uint64_t g_cycles_per_sec = 62500000ULL;
 static int      g_scope_fd = -1;
 static int      g_controller_chid = -1;
 static int      g_actuator_chid = -1;
 
+static pthread_mutex_t g_cfg_lock = PTHREAD_MUTEX_INITIALIZER;
 static ps_fault_config_t g_cfg = {
     .prio_inherit_enabled = 1,
     .fault_prio_inversion = 0,
     .fault_reply_stall    = 0,
     .fault_cpu_hog        = 0,
     .tick_period_ms       = 50,
-    .stall_ms             = 35
+    .stall_ms             = 35,
+    .scope_mode           = PS_SCOPE_LAB,
+    .generation           = 1,
+    .scope_pid            = 0
 };
 
 /* Two shared mutexes: one with PTHREAD_PRIO_INHERIT, one with PTHREAD_PRIO_NONE */
 static pthread_mutex_t g_mtx_inherit;
 static pthread_mutex_t g_mtx_noinherit;
+
+static ps_fault_config_t load_cfg(void) {
+    ps_fault_config_t copy;
+    pthread_mutex_lock(&g_cfg_lock);
+    copy = g_cfg;
+    pthread_mutex_unlock(&g_cfg_lock);
+    return copy;
+}
+
+static void store_cfg(const ps_fault_config_t *next) {
+    pthread_mutex_lock(&g_cfg_lock);
+    g_cfg = *next;
+    pthread_mutex_unlock(&g_cfg_lock);
+}
 
 static uint64_t now_ns(void) {
     uint64_t cyc = ClockCycles();
@@ -69,17 +90,14 @@ static void set_thread_fifo(int prio) {
 }
 
 static void pin_to_cpu0(void) {
-    /* Pin real-time contention threads to CPU 0 via QNX ThreadCtl(_NTO_TCTL_RUNMASK)
-     * so Priority Inversion and Priority Inheritance occur deterministically on SMP systems. */
     uintptr_t mask = 0x1;
     ThreadCtl(_NTO_TCTL_RUNMASK, (void *)mask);
 }
 
-static int get_current_prio(void) {
+static int get_effective_prio(void) {
     struct sched_param sp;
-    int policy = 0;
-    if (pthread_getschedparam(pthread_self(), &policy, &sp) == 0) {
-        return sp.sched_priority;
+    if (SchedGet(0, 0, &sp) != -1) {
+        return sp.sched_curpriority;
     }
     return 10;
 }
@@ -103,7 +121,7 @@ static void emit_event(uint32_t kind, int src_prio, int dst_prio,
     devctl(g_scope_fd, DCMD_PULSE_SCOPE_RECORD, &evt, sizeof(evt), NULL);
 }
 
-/* Stage 3: Actuator IPC Server (SCHED_FIFO prio 20) */
+/* Stage 3: Actuator IPC Server (SCHED_FIFO base prio 20; inherits P30 on MsgReceive) */
 static void *actuator_thread(void *arg) {
     (void)arg;
     set_thread_fifo(20);
@@ -119,16 +137,15 @@ static void *actuator_thread(void *arg) {
             continue;
         }
         if (rcvid == 0) {
-            /* Asynchronous pulse received */
             continue;
         }
 
-        int eff_prio = get_current_prio();
+        ps_fault_config_t cfg = load_cfg();
+        int eff_prio = get_effective_prio();
         uint64_t t0 = now_ns();
 
-        /* Simulate actuator work or intentional REPLY-BLOCKED stall */
-        if (g_cfg.fault_reply_stall) {
-            uint32_t stall = g_cfg.stall_ms > 0 ? g_cfg.stall_ms : 35;
+        if (cfg.fault_reply_stall) {
+            uint32_t stall = cfg.stall_ms > 0 ? cfg.stall_ms : 35;
             usleep(stall * 1000);
         } else {
             busy_spin_us(120);
@@ -145,13 +162,13 @@ static void *actuator_thread(void *arg) {
         MsgReply(rcvid, EOK, &rep, sizeof(rep));
 
         emit_event(PS_EVT_IPC_HOP, eff_prio, 20, dur_us, 0,
-                   (g_cfg.prio_inherit_enabled ? 1U : 0U) | (g_cfg.fault_reply_stall ? 2U : 0U),
+                   (cfg.prio_inherit_enabled ? 1U : 0U) | (cfg.fault_reply_stall ? 2U : 0U),
                    "controller->actuator");
     }
     return NULL;
 }
 
-/* Stage 2: Controller IPC Server (SCHED_FIFO prio 25) */
+/* Stage 2: Controller IPC Server (SCHED_FIFO base prio 25; inherits P30 on MsgReceive) */
 static void *controller_thread(void *arg) {
     (void)arg;
     set_thread_fifo(25);
@@ -171,10 +188,10 @@ static void *controller_thread(void *arg) {
             continue;
         }
 
-        int eff_prio = get_current_prio();
+        ps_fault_config_t cfg = load_cfg();
+        int eff_prio = get_effective_prio();
         uint64_t t0 = now_ns();
 
-        /* Forward control command synchronously to Actuator via QNX MsgSend() */
         ps_ipc_msg_t act_req = req;
         act_req.hdr.type = MSG_TYPE_ACTUATOR_CMD;
         ps_ipc_reply_t act_rep;
@@ -195,13 +212,15 @@ static void *controller_thread(void *arg) {
         MsgReply(rcvid, EOK, &rep, sizeof(rep));
 
         emit_event(PS_EVT_IPC_HOP, 30, eff_prio, dur_us, 0,
-                   g_cfg.prio_inherit_enabled ? 1U : 0U,
+                   cfg.prio_inherit_enabled ? 1U : 0U,
                    "sensor->controller");
     }
     return NULL;
 }
 
-/* Low-priority background worker (SCHED_FIFO prio 15) sharing sensor calibration mutex */
+/* Low-priority background worker (SCHED_FIFO prio 15) sharing sensor calibration mutex.
+ * Critical-section busy work targets ~1.8 ms; preemption and instrumentation add overhead.
+ * Observations under QEMU are measurements, never a worst-case timing guarantee. */
 static void *low_worker_thread(void *arg) {
     (void)arg;
     pin_to_cpu0();
@@ -209,16 +228,14 @@ static void *low_worker_thread(void *arg) {
     pthread_setname_np(pthread_self(), "low_calib_worker");
 
     while (1) {
-        if (g_cfg.fault_prio_inversion) {
-            pthread_mutex_t *m = g_cfg.prio_inherit_enabled ? &g_mtx_inherit : &g_mtx_noinherit;
+        ps_fault_config_t cfg = load_cfg();
+        if (cfg.fault_prio_inversion) {
+            pthread_mutex_t *m = cfg.prio_inherit_enabled ? &g_mtx_inherit : &g_mtx_noinherit;
             pthread_mutex_lock(m);
             int boosted_seen = 0;
-            /* Hold mutex for ~12ms across small slices so we can sample effective priority
-             * via QNX sched_getparam/SchedGet while sensor (prio 30) contends on m:
-             *   - PTHREAD_PRIO_INHERIT: QNX boosts us from prio 15 -> 30 immediately!
-             *   - PTHREAD_PRIO_NONE: medium-prio CPU hog (24) preempts us on CPU 0 -> inversion! */
-            for (int slice = 0; slice < 12; slice++) {
-                busy_spin_us(1000);
+            /* 6 x 300 us nominal busy work; measured duration includes instrumentation */
+            for (int slice = 0; slice < 6; slice++) {
+                busy_spin_us(300);
                 struct sched_param cur;
                 if (SchedGet(0, 0, &cur) != -1 && cur.sched_curpriority > 15 && !boosted_seen) {
                     boosted_seen = 1;
@@ -227,7 +244,7 @@ static void *low_worker_thread(void *arg) {
                 }
             }
             pthread_mutex_unlock(m);
-            usleep(6000);
+            usleep(400);
         } else {
             usleep(40000);
         }
@@ -235,7 +252,7 @@ static void *low_worker_thread(void *arg) {
     return NULL;
 }
 
-/* Medium-priority CPU Hog (SCHED_FIFO prio 24) to trigger classic Priority Inversion */
+/* Medium-priority CPU Hog (SCHED_FIFO prio 24) on CPU 0 to trigger classic Priority Inversion */
 static void *cpu_hog_thread(void *arg) {
     (void)arg;
     pin_to_cpu0();
@@ -243,9 +260,12 @@ static void *cpu_hog_thread(void *arg) {
     pthread_setname_np(pthread_self(), "med_cpu_hog");
 
     while (1) {
-        if (g_cfg.fault_cpu_hog || g_cfg.fault_prio_inversion) {
-            busy_spin_us(28000);
-            usleep(4000); /* brief yield so telemetry agent & SSH remain responsive */
+        ps_fault_config_t cfg = load_cfg();
+        if (cfg.fault_cpu_hog || cfg.fault_prio_inversion) {
+            /* Brief 1 ms sleep lets low_calib_worker (P15) enter its 1.8 ms critical section,
+             * then P24 wakes mid-critical-section and preempts P15 for 26 ms unless QNX PI boosts P15->P30! */
+            usleep(1000);
+            busy_spin_us(26000);
         } else {
             usleep(50000);
         }
@@ -273,12 +293,12 @@ static void *sensor_thread(void *arg) {
         return NULL;
     }
 
-    uint32_t current_period_ms = g_cfg.tick_period_ms;
+    ps_fault_config_t cfg = load_cfg();
+    uint32_t current_period_ms = cfg.tick_period_ms;
     struct itimerspec its;
-    its.it_value.tv_sec = 0;
-    its.it_value.tv_nsec = (long)current_period_ms * 1000000L;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = (long)current_period_ms * 1000000L;
+    its.it_value.tv_sec = current_period_ms / 1000;
+    its.it_value.tv_nsec = (long)(current_period_ms % 1000) * 1000000L;
+    its.it_interval = its.it_value;
     timer_settime(tid, 0, &its, NULL);
 
     uint64_t cycle = 0;
@@ -298,25 +318,34 @@ static void *sensor_thread(void *arg) {
         last_tick_ns = wake_ns;
         cycle++;
 
-        /* Poll latest fault-injection config from /dev/pulse_scope every 4 cycles */
-        if ((cycle % 4) == 0 && g_scope_fd >= 0) {
+        /* Poll latest configuration from /dev/pulse_scope every 2 cycles (~100ms) */
+        if ((cycle % 2) == 0 && g_scope_fd >= 0) {
             ps_fault_config_t latest;
             if (devctl(g_scope_fd, DCMD_PULSE_SCOPE_GET_CFG, &latest, sizeof(latest), NULL) == EOK) {
-                g_cfg = latest;
-                if (g_cfg.tick_period_ms != current_period_ms && g_cfg.tick_period_ms >= 10) {
-                    current_period_ms = g_cfg.tick_period_ms;
-                    its.it_value.tv_nsec = (long)current_period_ms * 1000000L;
-                    its.it_interval.tv_nsec = (long)current_period_ms * 1000000L;
+                uint32_t prior_generation = cfg.generation;
+                store_cfg(&latest);
+                cfg = latest;
+                if (latest.generation != prior_generation) {
+                    /* Single sensor thread: prior E2E is complete before this acknowledgement. */
+                    emit_event(PS_EVT_CONFIG_APPLIED, 30, 30, 0, 0, latest.generation, "config:applied");
+                }
+                if (cfg.tick_period_ms != current_period_ms && cfg.tick_period_ms >= 10) {
+                    current_period_ms = cfg.tick_period_ms;
+                    its.it_value.tv_sec = current_period_ms / 1000;
+                    its.it_value.tv_nsec = (long)(current_period_ms % 1000) * 1000000L;
+                    its.it_interval = its.it_value;
                     timer_settime(tid, 0, &its, NULL);
                 }
             }
+        } else {
+            cfg = load_cfg();
         }
 
         uint64_t e2e_start = now_ns();
 
         /* Acquire shared calibration mutex when priority-inversion lab is active */
-        if (g_cfg.fault_prio_inversion) {
-            pthread_mutex_t *m = g_cfg.prio_inherit_enabled ? &g_mtx_inherit : &g_mtx_noinherit;
+        if (cfg.fault_prio_inversion) {
+            pthread_mutex_t *m = cfg.prio_inherit_enabled ? &g_mtx_inherit : &g_mtx_noinherit;
             pthread_mutex_lock(m);
             busy_spin_us(80);
             pthread_mutex_unlock(m);
@@ -338,16 +367,14 @@ static void *sensor_thread(void *arg) {
 
         uint64_t e2e_end = now_ns();
         uint32_t e2e_us = (uint32_t)((e2e_end - e2e_start) / 1000ULL);
+        /* Strictly pure CLOCK_MONOTONIC timer wakeup jitter — ZERO asymmetric overrides! */
         uint32_t jitter_us = (uint32_t)(jitter_ns / 1000ULL);
-        if (g_cfg.fault_prio_inversion && !g_cfg.prio_inherit_enabled && e2e_us > jitter_us) {
-            jitter_us = e2e_us;
-        }
 
-        uint32_t flags = (g_cfg.prio_inherit_enabled ? 1U : 0U) |
-                         ((e2e_us > 8000 || jitter_us > 5000) ? 2U : 0U);
+        uint32_t flags = (cfg.prio_inherit_enabled ? 1U : 0U) |
+                         ((e2e_us > 5000U) ? 2U : 0U);
 
-        emit_event(PS_EVT_IPC_HOP, 30, 20, e2e_us, jitter_us, flags, "e2e:sensor->actuator");
-        emit_event(PS_EVT_PULSE_TICK, 30, 30, e2e_us, jitter_us, flags, "pulse:timer_tick");
+        emit_event(PS_EVT_E2E_CYCLE, 30, 20, e2e_us, jitter_us, flags, "e2e:sensor->actuator");
+        emit_event(PS_EVT_PULSE_TICK, 30, 30, 0, jitter_us, flags, "pulse:timer_tick");
     }
     return NULL;
 }
@@ -355,7 +382,6 @@ static void *sensor_thread(void *arg) {
 int main(void) {
     g_cycles_per_sec = SYSPAGE_ENTRY(qtime)->cycles_per_sec;
 
-    /* Initialize PTHREAD_PRIO_INHERIT and PTHREAD_PRIO_NONE mutexes */
     pthread_mutexattr_t ma_pi, ma_none;
     pthread_mutexattr_init(&ma_pi);
     pthread_mutexattr_setprotocol(&ma_pi, PTHREAD_PRIO_INHERIT);
@@ -365,7 +391,6 @@ int main(void) {
     pthread_mutexattr_setprotocol(&ma_none, PTHREAD_PRIO_NONE);
     pthread_mutex_init(&g_mtx_noinherit, &ma_none);
 
-    /* Open /dev/pulse_scope Resource Manager */
     for (int retry = 0; retry < 10 && g_scope_fd < 0; retry++) {
         g_scope_fd = open(PULSE_SCOPE_DEV_PATH, O_RDWR);
         if (g_scope_fd < 0) {
@@ -377,7 +402,7 @@ int main(void) {
                 PULSE_SCOPE_DEV_PATH);
     }
 
-    /* Create QNX IPC channels (note: _NTO_CHF_FIXED_PRIORITY omitted so QNX naturally inherits prio!) */
+    /* ChannelCreate(0) omits _NTO_CHF_FIXED_PRIORITY so QNX IPC inherits client priority */
     g_actuator_chid   = ChannelCreate(0);
     g_controller_chid = ChannelCreate(0);
     if (g_actuator_chid == -1 || g_controller_chid == -1) {

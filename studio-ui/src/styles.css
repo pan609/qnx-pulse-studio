@@ -992,3 +992,55 @@ body {
   color: #e2e8f0;
   overflow-x: auto;
 }
+
+/* The working signals and controls share the first screen. */
+fieldset { border:0; padding:0; margin:0; min-width:0; }
+button:disabled, fieldset:disabled button { opacity:.45; cursor:not-allowed; }
+.connection-bar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 0 18px; }
+.connection-bar input,.scope-control input,.scope-control select { color:#e2e8f0; background:#101a2b; border:1px solid #334155; border-radius:6px; padding:8px; max-width:100%; }
+.connection-bar input { width:240px; }
+.status-pill.replay { color:#fbbf24; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.35); }
+.workspace-grid { grid-template-columns:minmax(0,2fr) minmax(270px,1fr); align-items:start; }
+.workspace-signals { display:grid; gap:14px; min-width:0; }
+.topology-panel .panel-header { margin-bottom:10px; }
+.observed-nodes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.observed-node { min-width:0; padding:9px; background:#0c1524; border:1px solid #243349; border-radius:6px; display:grid; gap:6px; }
+.observed-node strong { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.observed-node>span { font:10px monospace; color:#94a3b8; }
+.observed-node>div { display:flex; justify-content:space-between; gap:4px; font:11px monospace; }
+.observed-node.boosted { border-color:#10b981; }
+.observed-node .state-pill { font-size:9px; padding:2px 4px; }
+.wait-links { display:flex; gap:10px; flex-wrap:wrap; font-size:11px; margin-top:10px; }
+.topology-note { font-size:10px; margin:8px 0 0; line-height:1.5; }
+.osc-canvas { height:155px; }
+.aeb-ruler { margin:10px 0 0; padding:10px 12px; border-top:1px solid #273449; color:#94a3b8; font-size:11px; line-height:1.7; }
+.aeb-ruler strong { color:#e2e8f0; }
+.scope-control { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; margin:16px 0; }
+.scope-control input { width:100px; }
+.lab-panel>p { line-height:1.7; font-size:11px; }
+.table-scroll { overflow:auto; max-height:390px; }
+.thread-table small { display:block; font-size:10px; color:#94a3b8; }
+.app-shell>.panel { margin-top:16px; }
+@media(max-width:900px) { .workspace-grid { grid-template-columns:1fr; } .observed-nodes { grid-template-columns:repeat(2,minmax(0,1fr)); } .topbar { align-items:flex-start; } }
+.app-shell>* { min-width:0; max-width:100%; }
+.panel { min-width:0; }
+.topology-panel { gap:6px; padding:12px; }
+.observed-node { padding:7px; gap:4px; }
+.topology-panel h2 { font-size:16px; }
+.osc-panel { gap:6px; }
+.osc-panel .panel-header h2 { font-size:16px; }
+.target-chip { white-space:normal; overflow-wrap:anywhere; }
+.diag-columns>div { min-width:0; }
+.diag-list { overflow-wrap:anywhere; }
+.console-form { flex-wrap:wrap; }
+.console-input { min-width:0; }
+.bench-stat-row>div { min-width:0; }
+@media(max-width:900px) {
+  .bottom-grid { grid-template-columns:minmax(0,1fr); }
+  .app-shell { padding:12px; }
+  .kpi-value { font-size:20px; }
+  .console-prompt { font-size:10px; }
+  .bench-stat-row { grid-template-columns:minmax(0,1fr); }
+  .bench-meta,.bench-meta>* { min-width:0; max-width:100%; }
+  .brand-sub { white-space:normal; }
+}

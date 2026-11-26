@@ -1,7 +1,7 @@
 # QNX Pulse Studio
 
-> **Real-Time Microkernel IPC, Resource Manager & Deterministic Scheduling Observatory for QNX OS 8.0**  
-> Built for the **QNX Global Hackathon** — Primary Track: **Developer Tooling & Host Tools**  
+> **Real-Time Microkernel IPC, Resource Manager & Deterministic Scheduling Observatory for QNX OS 8.0**
+> Built for the **QNX Global Hackathon** — Primary Track: **Developer Tooling & Host Tools**
 > Bonus Targets: **Best Use of QNX-Specific Technologies** & **Best Codelab / Tutorial**
 >
 > - ⚡ **Live Interactive Studio (Zero-Install Demo + Verified QNX 8.0 Capture Replay)**: [`https://pan609.github.io/qnx-pulse-studio/`](https://pan609.github.io/qnx-pulse-studio/)
@@ -9,14 +9,21 @@
 
 ---
 
-## Verified Real QNX 8.0.0 Benchmark (`QEMU_virt aarch64le`)
+## Recorded QNX OS 8.0 benchmark (QEMU TCG)
 
-Measured live on **genuine QNX 8.0.0 (`aarch64le`)** via `/dev/pulse_scope` (`ClockCycles()` @ `62.5 MHz`) with contending `SCHED_FIFO` threads pinned to CPU 0 using `ThreadCtl(_NTO_TCTL_RUNMASK, (void *)0x1)`:
+P99 E2E: PI OFF 21,548 µs / PI ON 7,029 µs. Missed cycles: 9/92 and 1/91.
 
-| Scenario | QNX Priority Boosts (`SchedGet` P15→P30) | Avg E2E IPC | P99 Wakeup Jitter | RT Deadline Misses (>5 ms) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Priority Inversion (`PTHREAD_PRIO_NONE`)** | `0` | `5,374 µs` | **`63,666 µs` (63.7 ms)** | `66` |
-| **QNX Priority Inheritance (`PTHREAD_PRIO_INHERIT`)** | **`35`** | **`1,256 µs` (4.3× faster)** | **`4,776 µs` (13.3× lower!)** | `12` |
+| Mode | E2E cycles | Mean E2E (µs) | P99 E2E (µs) | P99 wakeup interval jitter (µs) | Missed E2E cycles (>5 ms) | Recorded boost events |
+|---|---:|---:|---:|---:|---:|---:|
+| PI OFF | 92 | 1642 | 21548 | 5215 | 9 | 0 |
+| PI ON | 91 | 551 | 7029 | 4582 | 1 | 14 |
+
+Captured 2026-11-26T06:51:17.455744Z. One run on one host; QEMU TCG has no hardware real-time guarantee. E2E and jitter use independent 128-sample windows; misses/max are since reset. This replaces the initial release's invalid mixed-metric benchmark.
+
+[Original capture](studio-ui/public/captures/qnx8-qemu-verified-trace.json) · [Target proof](docs/qnx8-verified-capture-proof.txt) · [Checksums](docs/capture-sha256.json) · [HTTP/JSON smoke result](docs/target-smoke.json)
+
+![Recorded QNX capture](docs/assets/recorded-studio.png)
+![PI transition on the running QNX guest](docs/assets/pi-transition.gif)
 
 ---
 
@@ -26,13 +33,13 @@ QNX OS 8.0's microkernel architecture—synchronous **Message Passing IPC** (`Ms
 
 Yet observing microkernel scheduling behavior, diagnosing `STATE_REPLY` cascades, or proving Priority Inheritance under CPU contention has traditionally required heavyweight legacy IDEs or raw CLI `pidin`/`tracelogger` output.
 
-**QNX Pulse Studio** pairs a **native QNX 8.0 C microkernel telemetry stack** (running inside QNX 8.0 on QEMU or Raspberry Pi 5) with a **modern zero-install Web Observatory & AI Trace Co-Pilot** on your host machine:
+**QNX Pulse Studio** pairs a **native QNX 8.0 C microkernel telemetry stack** (running inside QNX 8.0 on QEMU or Raspberry Pi 5) with a **modern zero-install Web Observatory & rule-based Trace Analyst (optional BYOK LLM)** on your host machine:
 
 - **Live Microkernel IPC Topology Graph**: Visualize `CLOCK_MONOTONIC` → `SIGEV_PULSE` → `sensor_rt_loop` → `controller_srv` → `actuator_srv` synchronous message hops and priority-inheritance boosts in real time.
 - **Deterministic Oscilloscope**: Plot hardware-timed `ClockCycles()` E2E IPC latency and wakeup jitter (µs) against a 5 ms hard real-time deadline.
 - **Live Fault Injection via `devctl()`**: Toggle `PTHREAD_PRIO_INHERIT` vs `PTHREAD_PRIO_NONE`, inject a medium-priority CPU hog to trigger classic **Priority Inversion**, or stall `MsgReply()` to observe **`REPLY-BLOCKED`** cascades live.
 - **Interactive `/dev/pulse_scope` Console**: Send real POSIX `read()` / `write()` / `devctl()` commands directly from your browser into our QNX 8.0 Resource Manager.
-- **AI Microkernel Trace Co-Pilot**: Inspects captured `/proc/<pid>/as` thread states (`DCMD_PROC_TIDSTATUS`) and `ClockCycles()` jitter to explain root causes and emit copy-pasteable QNX C API fix diffs (works offline with zero API keys, with optional BYOK LLM mode).
+- **Local Trace Analyst**: Inspects captured `/proc/<pid>/as` thread states (`DCMD_PROC_TIDSTATUS`) and `ClockCycles()` jitter to explain root causes and suggest further QNX C API investigations (works offline with zero API keys, with optional BYOK LLM mode).
 
 ---
 
@@ -67,7 +74,7 @@ Yet observing microkernel scheduling behavior, diagnosing `STATE_REPLY` cascades
 ┌───────────────────────────────────────────────────────────────────────────┐
 │              Host Workstation (macOS Apple Silicon / Linux / Win)         │
 │   QNX Pulse Studio Web UI (React + TypeScript + Canvas Oscilloscope)      │
-│   • Auto-connects to live QNX 8.0 (:8080) or falls back to ?demo=1 mode   │
+│   • Recorded capture by default; explicit live connection or synthetic simulation   │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -135,9 +142,30 @@ npm run dev
 
 ## Codelab / Tutorial
 
-Read our step-by-step zero-hardware guide targeting Apple Silicon macOS & QEMU HVF:  
+Read our step-by-step zero-hardware guide targeting Apple Silicon macOS & QEMU virt-7.2 / GICv2 / TCG:
 👉 **[`codelab/CODELAB.md`](codelab/CODELAB.md)**
 
 ## License
 
 Released under the [MIT License](LICENSE).
+
+## Evidence and repeatable checks
+
+```sh
+./scripts/build-target.sh
+./scripts/deploy-to-qnx.sh
+python3 scripts/smoke-target.py
+python3 scripts/capture-qnx-trace.py
+cd studio-ui
+npm ci
+npm run build
+npm test
+```
+
+The capture script preserves all snapshots and raw events for Nominal → PI OFF → PI ON. It cross-checks each E2E cycle, P99 and miss counter; no trace points are synthesized. Read-only replay never marks a live connection. Browser simulation is synthetic and labeled throughout. Failures of a live target do not switch sources automatically.
+
+The source, QNX ELF binaries and trace are tied by SHA-256 in `docs/capture-sha256.json`. The proof log identifies the QNX kernel in QEMU, not a physical device. Scope controls `lab | all | pid` inspect up to 48 threads (16 per process); the E2E counters still describe the built-in workload. /proc scans are non-atomic; causal diagnosis requires native tracing to confirm owners and short transients.
+
+The default analyzer is a local evidence rule engine, not an LLM. Optional BYOK sends selected sampled telemetry to the explicitly configured endpoint. No key is stored. Suggestions require engineering review. The 100 km/h ruler shows extra travel during measured E2E latency only, not total braking distance or a vehicle safety guarantee.
+
+For an HTTPS hosted Studio unable to access an HTTP localhost target, run `npm run dev` locally. QEMU forwarding is bound to loopback. No hardware timing certification is implied.

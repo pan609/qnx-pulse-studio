@@ -138,7 +138,8 @@ export const Oscilloscope: React.FC<Props> = ({ points, deadlineUs = 5000, t }) 
           <span className="legend-pill emerald">{t.oscBoostWin}</span>
         </div>
       </div>
-      <canvas ref={canvasRef} className="osc-canvas" />
+      <canvas ref={canvasRef} className="osc-canvas" role="img" aria-label="Measured E2E response time and wakeup interval jitter in microseconds" />
+      <div className="aeb-ruler">100 km/h · latency travel = {((points.at(-1)?.ipcUs || 0) / 1000000 * (100/3.6)).toFixed(3)} m. E2E only; not braking distance or a safety guarantee. {points.length} recorded cycles.</div>
     </div>
   );
 };

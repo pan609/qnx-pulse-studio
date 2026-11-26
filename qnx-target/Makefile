@@ -1,5 +1,5 @@
 # QNX SDP 8.0 Native Cross-Compilation Makefile
-# Targets: aarch64le (Apple Silicon QEMU HVF / Raspberry Pi 5) or x86_64
+# Targets: aarch64le (macOS/Linux QEMU virt-7.2 / Raspberry Pi 5) or x86_64
 
 ARCH ?= aarch64le
 

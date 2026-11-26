@@ -7,6 +7,13 @@ export interface HostInfo {
 
 export interface TelemetryMetrics {
   total_ipc_msgs: number;
+  total_cycles: number;
+  avg_e2e_us: number;
+  p99_e2e_us: number;
+  max_e2e_us: number;
+  last_e2e_us: number;
+  avg_jitter_us: number;
+  max_jitter_us: number;
   total_pulses: number;
   prio_boost_count: number;
   deadline_misses: number;
@@ -23,12 +30,16 @@ export interface FaultConfig {
   fault_cpu_hog: boolean;
   tick_period_ms: number;
   stall_ms: number;
+  scope_mode: 'lab' | 'all' | 'pid';
+  scope_pid: number;
+  generation: number;
 }
 
 export interface ThreadSnap {
   pid: number;
   tid: number;
   name: string;
+  proc_name?: string;
   priority: number;
   real_priority: number;
   state: string;
@@ -40,14 +51,14 @@ export interface ThreadSnap {
 export interface TelemetryEvent {
   seq: number;
   ts_ns: number;
-  kind: number; // 1=IPC_HOP, 2=PULSE_TICK, 3=PRIO_BOOST, 4=FAULT_TOGGLE, 5=DEVCTL
+  kind: number; // 1=IPC_HOP, 2=PULSE_TICK, 3=PRIO_BOOST, 4=FAULT_TOGGLE, 5=DEVCTL, 6=E2E_CYCLE, 7=CONFIG_APPLIED
   src_pid: number;
   dst_pid: number;
   src_prio: number;
   dst_prio: number;
   latency_us: number;
   jitter_us: number;
-  flags: number; // bit0=prio_inherit, bit1=anomaly
+  flags: number; // kind 7: config generation; other kinds: bit0=prio_inherit, bit1=anomaly
   label: string;
 }
 
@@ -63,6 +74,8 @@ export interface Snapshot {
 }
 
 export interface OscPoint {
+  seq?: number;
+  phase?: string;
   ts: number;
   ipcUs: number;
   jitterUs: number;

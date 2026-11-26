@@ -13,6 +13,8 @@ const PRESET_CMDS = [
   { label: 'prio_inherit=0', cmd: 'prio_inherit=0' },
   { label: 'prio_inherit=1', cmd: 'prio_inherit=1' },
   { label: 'reply_stall=1', cmd: 'reply_stall=1' },
+  { label: 'scope=all', cmd: 'scope=all' },
+  { label: 'scope=lab', cmd: 'scope=lab' },
   { label: 'reset', cmd: 'reset' },
 ];
 
@@ -28,6 +30,8 @@ export const ResmgrConsole: React.FC<Props> = ({ onSendCommand, t }) => {
       const label =
         displayLabel ?? (rawCmd ? `echo "${rawCmd}" > /dev/pulse_scope && cat /dev/pulse_scope` : 'cat /dev/pulse_scope');
       setHistory((prev) => [{ cmd: label, out, ts: new Date().toLocaleTimeString() }, ...prev].slice(0, 8));
+    } catch (e) {
+      setHistory(prev => [{cmd:rawCmd, out:String(e), ts:new Date().toLocaleTimeString()}, ...prev].slice(0,8));
     } finally {
       setBusy(false);
     }

@@ -1,0 +1,188 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node@22/22.23.4/bin/node",
+      "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/node_modules/.bin/playwright",
+      "test",
+      "--grep",
+      "chart filters|missing archive"
+    ],
+    "configFile": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/playwright.config.ts",
+    "rootDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 45000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/tests",
+        "snapshotDir": "/Users/panyue/Desktop/project/Self/makemoney/contests/03-qnx-global-hackathon/qnx-pulse-studio/studio-ui/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 45000,
+        "use": {
+          "baseURL": "http://127.0.0.1:5193",
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "headless": true
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../docs/browser-tests.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run build && npm run preview -- --host 127.0.0.1 --port 5193 --strictPort",
+      "url": "http://127.0.0.1:5193",
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "telemetry.spec.ts",
+      "file": "telemetry.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "chart filters E2E and deduplicates controls and repeated events",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 32,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-26T06:54:00.098Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a7cf16ab6d0dd51a5bfe-fdb960852ea217e1f50f",
+          "file": "telemetry.spec.ts",
+          "line": 20,
+          "column": 1
+        },
+        {
+          "title": "missing archive never presents simulation as recorded data",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1006,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-26T06:54:00.161Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a7cf16ab6d0dd51a5bfe-6446506416e29bb3bc75",
+          "file": "telemetry.spec.ts",
+          "line": 113,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-26T06:53:54.447Z",
+    "duration": 7130.223,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

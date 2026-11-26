@@ -14,3 +14,10 @@ studio-ui/node_modules/
 studio-ui/dist/
 .DS_Store
 *.tsbuildinfo
+
+# Local browser test scratch (summary and selected captures live in docs/)
+studio-ui/test-results/
+studio-ui/playwright-report/
+docs/assets/frames/
+studio-ui/public/assets/
+docs/qa-rounds/

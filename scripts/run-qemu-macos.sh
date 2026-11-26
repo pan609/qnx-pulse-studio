@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the QNX 8.0 AArch64 target natively on Apple Silicon macOS via QEMU + Hypervisor.framework (hvf).
+# Runs the QNX 8.0 AArch64 target on Apple Silicon macOS (or Linux) via QEMU virt-7.2 (GICv2).
 # Forwards:
 #   localhost:8022 -> QNX SSH (port 22)
 #   localhost:8080 -> QNX Pulse Studio Telemetry & Control Agent (port 8080)
@@ -46,7 +46,7 @@ exec qemu-system-aarch64 \
   -m 2G \
   -drive "file=${DISK_IMG},if=none,id=drv0" \
   -device virtio-blk-device,drive=drv0 \
-  -netdev "user,id=net0,hostfwd=tcp::8022-:22,hostfwd=tcp::8080-:8080,hostfwd=tcp::8000-:8000" \
+  -netdev "user,id=net0,hostfwd=tcp:127.0.0.1:8022-:22,hostfwd=tcp:127.0.0.1:8080-:8080,hostfwd=tcp:127.0.0.1:8000-:8000" \
   -device virtio-net-device,netdev=net0,mac=52:54:00:12:34:56 \
   -kernel "${IFS_BIN}" \
   -object rng-random,filename=/dev/urandom,id=rng0 \

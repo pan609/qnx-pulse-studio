@@ -24,9 +24,9 @@ export const AiCopilot: React.FC<Props> = ({ snapshot, lang, t }) => {
 
   // Immediately re-translate built-in report when user toggles EN / 中文
   useEffect(() => {
-    setReport(analyzeSnapshotDeterministic(snapshot, lang));
+    if (!analyzing) setReport(prev => prev.generatedBy === 'llm-copilot' ? prev : analyzeSnapshotDeterministic(snapshot, lang));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang]);
+  }, [lang, snapshot, analyzing]);
 
   const handleAnalyze = async () => {
     setAnalyzing(true);
@@ -101,6 +101,7 @@ export const AiCopilot: React.FC<Props> = ({ snapshot, lang, t }) => {
 
       {llmErr && <div className="err-banner">{llmErr}</div>}
 
+      {report.generatedBy === 'llm-copilot' && <p className="muted-text">Captured LLM report · press Analyze to refresh this report.</p>}
       <div className={`diag-banner severity-${report.severity}`}>
         <div className="diag-head">
           <span className={`sev-pill ${report.severity}`}>{t.sevLabels[report.severity]}</span>

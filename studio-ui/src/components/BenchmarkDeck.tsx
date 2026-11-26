@@ -1,11 +1,12 @@
 import React, { useRef } from 'react';
 import { BarChart3, Download, Play, Upload, History, RotateCcw } from 'lucide-react';
-import type { BenchmarkComparison, TraceArchive } from '../benchmark';
+import { parseTrace, type BenchmarkComparison, type TraceArchive } from '../benchmark';
 import type { Lang } from '../i18n';
 
 interface Props {
   lang: Lang;
-  benchmark: BenchmarkComparison;
+  benchmark: BenchmarkComparison | null;
+  canRun: boolean;
   runningPhase: 'idle' | 'pi-off' | 'pi-on';
   replayMode: boolean;
   onRunAutoBenchmark: () => void;
@@ -17,6 +18,7 @@ interface Props {
 
 export const BenchmarkDeck: React.FC<Props> = ({
   lang,
+  canRun,
   benchmark,
   runningPhase,
   replayMode,
@@ -26,35 +28,39 @@ export const BenchmarkDeck: React.FC<Props> = ({
   onLoadVerifiedCapture,
   onExitReplay,
 }) => {
+  const [importError, setImportError] = React.useState('');
   const fileRef = useRef<HTMLInputElement | null>(null);
   const zh = lang === 'zh';
 
+  const empty = {avgE2eUs:0,p99E2eUs:0,maxE2eUs:0,p99JitterUs:0,prioBoosts:0,deadlineMisses:0,samples:0};
+  const measured = benchmark;
+  benchmark = benchmark || {capturedAt:'—',source:'qnx-8.0-sim',hostLabel:'No A/B measurement loaded',piOff:empty,piOn:empty};
   const jitterRatio =
-    benchmark.piOn.p99JitterUs > 0
-      ? (benchmark.piOff.p99JitterUs / benchmark.piOn.p99JitterUs).toFixed(1)
+    benchmark.piOn.p99E2eUs > 0
+      ? (benchmark.piOff.p99E2eUs / benchmark.piOn.p99E2eUs).toFixed(1)
       : '—';
   const ipcRatio =
-    benchmark.piOn.avgIpcUs > 0
-      ? (benchmark.piOff.avgIpcUs / benchmark.piOn.avgIpcUs).toFixed(1)
+    benchmark.piOn.avgE2eUs > 0
+      ? (benchmark.piOff.avgE2eUs / benchmark.piOn.avgE2eUs).toFixed(1)
       : '—';
 
-  const maxJ = Math.max(benchmark.piOff.p99JitterUs, benchmark.piOn.p99JitterUs, 5000);
-  const offPct = Math.max(6, Math.round((benchmark.piOff.p99JitterUs / maxJ) * 100));
-  const onPct = Math.max(6, Math.round((benchmark.piOn.p99JitterUs / maxJ) * 100));
+  const maxJ = Math.max(benchmark.piOff.p99E2eUs, benchmark.piOn.p99E2eUs, 5000);
+  const offPct = Math.max(6, Math.round((benchmark.piOff.p99E2eUs / maxJ) * 100));
+  const onPct = Math.max(6, Math.round((benchmark.piOn.p99E2eUs / maxJ) * 100));
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 12 * 1024 * 1024) {setImportError('Trace exceeds 12 MB'); return;}
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result)) as TraceArchive;
+        const parsed = parseTrace(JSON.parse(String(reader.result)));
         if (parsed && Array.isArray(parsed.points) && parsed.lastSnapshot) {
           onImportTrace(parsed);
         }
-      } catch {
-        // Ignore malformed files cleanly
-      }
+        setImportError('');
+      } catch (e) { setImportError(String(e)); }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -81,7 +87,7 @@ export const BenchmarkDeck: React.FC<Props> = ({
           <button
             className="btn-primary-sm"
             onClick={onRunAutoBenchmark}
-            disabled={runningPhase !== 'idle'}
+            disabled={runningPhase !== 'idle' || !canRun}
           >
             <Play size={13} />{' '}
             {runningPhase === 'pi-off'
@@ -93,15 +99,15 @@ export const BenchmarkDeck: React.FC<Props> = ({
                   ? '采样 PI ON (3s)...'
                   : 'Sampling PI ON (3s)...'
                 : zh
-                  ? '运行 6 秒一键 A/B 对比'
-                  : 'Run 6s Auto A/B Benchmark'}
+                  ? '运行 A/B · 两阶段各 3 秒'
+                  : 'Run A/B · 3s per phase + settle'}
           </button>
 
-          <button className="btn-ghost-sm" onClick={onExportTrace}>
+          <button className="btn-ghost-sm" disabled={runningPhase !== 'idle'} onClick={onExportTrace}>
             <Download size={13} /> {zh ? '导出 Trace JSON' : 'Export Trace'}
           </button>
 
-          <button className="btn-ghost-sm" onClick={() => fileRef.current?.click()}>
+          <button className="btn-ghost-sm" disabled={runningPhase !== 'idle'} onClick={() => fileRef.current?.click()}>
             <Upload size={13} /> {zh ? '导入回放' : 'Import Trace'}
           </button>
           <input
@@ -113,18 +119,20 @@ export const BenchmarkDeck: React.FC<Props> = ({
           />
 
           {replayMode ? (
-            <button className="btn-lang" onClick={onExitReplay}>
-              <RotateCcw size={13} /> {zh ? '退出回放 · 恢复实时' : 'Exit Replay'}
+            <button className="btn-lang" disabled={runningPhase !== 'idle'} onClick={onExitReplay}>
+              <RotateCcw size={13} /> {zh ? '退出回放 · 模拟实验' : 'Exit Replay → Simulation'}
             </button>
           ) : (
-            <button className="btn-ghost-sm" onClick={onLoadVerifiedCapture}>
+            <button className="btn-ghost-sm" disabled={runningPhase !== 'idle'} onClick={onLoadVerifiedCapture}>
               <History size={13} /> {zh ? '载入真机实测轨迹' : 'Replay Verified QNX 8.0 Capture'}
             </button>
           )}
         </div>
       </div>
 
+      {importError && <div role="alert" className="err-banner">{importError}</div>}
       <div className="bench-meta">
+        <span className="legend-pill amber">{measured ? benchmark.source : 'NO A/B DATA'}</span>
         <span className="target-chip">{benchmark.hostLabel}</span>
         <span className="muted-text">
           {zh ? '采样来源' : 'Captured'}: {benchmark.capturedAt}
@@ -136,22 +144,22 @@ export const BenchmarkDeck: React.FC<Props> = ({
         )}
       </div>
 
-      <div className="bench-grid">
+      <div className="bench-grid" style={{opacity:measured?1:0.45}}>
         <div className="bench-card bench-off">
           <div className="bench-card-head">
             <span className="sev-pill critical">PI OFF · PTHREAD_PRIO_NONE</span>
-            <span className="muted-text">{benchmark.piOff.samples} IPC msgs</span>
+            <span className="muted-text">{benchmark.piOff.samples} E2E cycles</span>
           </div>
           <div className="bench-stat-row">
             <div>
-              <span className="kpi-label">{zh ? 'P99 唤醒抖动' : 'P99 Wakeup Jitter'}</span>
+              <span className="kpi-label">{zh ? 'P99 E2E 响应' : 'P99 E2E response'}</span>
               <div className="bench-big crimson-text">
-                {benchmark.piOff.p99JitterUs.toLocaleString()} µs
+                {benchmark.piOff.p99E2eUs.toLocaleString()} µs
               </div>
             </div>
             <div>
-              <span className="kpi-label">{zh ? '平均 IPC 延迟' : 'Avg E2E IPC'}</span>
-              <div className="bench-med">{benchmark.piOff.avgIpcUs.toLocaleString()} µs</div>
+              <span className="kpi-label">{zh ? '平均 E2E 响应' : 'Mean E2E response'}</span>
+              <div className="bench-med">{benchmark.piOff.avgE2eUs.toLocaleString()} µs</div>
             </div>
             <div>
               <span className="kpi-label">{zh ? '提权 / 超时' : 'Boosts / Misses'}</span>
@@ -166,10 +174,10 @@ export const BenchmarkDeck: React.FC<Props> = ({
         </div>
 
         <div className="bench-delta-card">
-          <span className="kpi-label">{zh ? 'QNX PI 抖动压降' : 'JITTER REDUCTION'}</span>
+          <span className="kpi-label">{zh ? 'P99 E2E 比值' : 'P99 E2E RATIO'}</span>
           <div className="delta-hero">{jitterRatio}×</div>
           <span className="delta-sub">
-            {zh ? `平均 IPC 提速 ${ipcRatio}×` : `${ipcRatio}× faster Avg IPC`}
+            {zh ? `平均 E2E 比值 ${ipcRatio}×` : `${ipcRatio}× mean E2E ratio`}
           </span>
           <span className="legend-pill emerald">
             +{benchmark.piOn.prioBoosts} {zh ? '次内核提权' : 'Kernel Boosts'}
@@ -179,18 +187,18 @@ export const BenchmarkDeck: React.FC<Props> = ({
         <div className="bench-card bench-on">
           <div className="bench-card-head">
             <span className="sev-pill nominal">PI ON · PTHREAD_PRIO_INHERIT</span>
-            <span className="muted-text">{benchmark.piOn.samples} IPC msgs</span>
+            <span className="muted-text">{benchmark.piOn.samples} E2E cycles</span>
           </div>
           <div className="bench-stat-row">
             <div>
-              <span className="kpi-label">{zh ? 'P99 唤醒抖动' : 'P99 Wakeup Jitter'}</span>
+              <span className="kpi-label">{zh ? 'P99 E2E 响应' : 'P99 E2E response'}</span>
               <div className="bench-big emerald-text">
-                {benchmark.piOn.p99JitterUs.toLocaleString()} µs
+                {benchmark.piOn.p99E2eUs.toLocaleString()} µs
               </div>
             </div>
             <div>
-              <span className="kpi-label">{zh ? '平均 IPC 延迟' : 'Avg E2E IPC'}</span>
-              <div className="bench-med">{benchmark.piOn.avgIpcUs.toLocaleString()} µs</div>
+              <span className="kpi-label">{zh ? '平均 E2E 响应' : 'Mean E2E response'}</span>
+              <div className="bench-med">{benchmark.piOn.avgE2eUs.toLocaleString()} µs</div>
             </div>
             <div>
               <span className="kpi-label">{zh ? '提权 / 超时' : 'Boosts / Misses'}</span>
@@ -204,6 +212,7 @@ export const BenchmarkDeck: React.FC<Props> = ({
           </div>
         </div>
       </div>
+      {measured && <p className="aeb-ruler">{zh ? '100 km/h 额外滑行距离（P99 E2E × 27.78 m/s）' : 'At 100 km/h: additional travel during P99 E2E latency'}: PI OFF <strong>{(benchmark.piOff.p99E2eUs / 1000000 * (100/3.6)).toFixed(3)} m</strong> → PI ON <strong>{(benchmark.piOn.p99E2eUs / 1000000 * (100/3.6)).toFixed(3)} m</strong>. {zh?'仅作延迟换算，不代表制动距离或安全保证。':'Latency illustration only; not braking distance or a safety guarantee.'}</p>}
     </section>
   );
 };

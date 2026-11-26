@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-11-26T06:51:56.010873+00:00",
+  "host": {
+    "sysname": "QNX",
+    "release": "8.0.0",
+    "machine": "QEMU_virt",
+    "nodename": "noname"
+  },
+  "checks": [
+    "split headers/body applied only after complete Content-Length",
+    "incomplete body rejected without mutation",
+    "oversized body rejected",
+    "POSIX write with newline/quotes/backslash yields valid JSON",
+    "snapshot JSON remains parseable with real system thread names"
+  ],
+  "result": "PASS"
+}

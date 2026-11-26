@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), { name: 'codelab-directory-index', configureServer(server) {
+    server.middlewares.use((req, _res, next) => {
+      if (req.url?.match(/^\/codelab\/(?:\?|$)/)) req.url = req.url.replace('/codelab/', '/codelab/index.html');
+      next();
+    });
+  } }],
   server: {
     port: 5173,
     proxy: {
